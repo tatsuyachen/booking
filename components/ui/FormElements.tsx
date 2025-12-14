@@ -3,17 +3,21 @@ import React from 'react';
 // Input Component
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
+  rightElement?: React.ReactNode; // Allow adding a button inside the input group
 }
-export const Input: React.FC<InputProps> = ({ label, id, className = '', ...props }) => (
+export const Input: React.FC<InputProps> = ({ label, id, className = '', rightElement, ...props }) => (
   <div className="mb-6">
     <label htmlFor={id} className="block mb-3 text-base font-bold text-text-heading">
       {label}
     </label>
-    <input
-      id={id}
-      className={`w-full px-4 py-3.5 border-2 border-yellow-200 rounded-xl text-base bg-[#fffbef] text-text-main transition-all duration-200 focus:outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20 ${className}`}
-      {...props}
-    />
+    <div className="relative flex items-center gap-2">
+      <input
+        id={id}
+        className={`w-full px-4 py-3.5 border-2 border-yellow-200 rounded-xl text-base bg-[#fffbef] text-text-main transition-all duration-200 focus:outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20 ${className}`}
+        {...props}
+      />
+      {rightElement}
+    </div>
   </div>
 );
 
@@ -48,7 +52,7 @@ export const Select: React.FC<SelectProps> = ({ label, id, options, ...props }) 
   </div>
 );
 
-// Checkbox Component
+// Checkbox Component (Kept for compatibility)
 interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
 }
@@ -67,6 +71,28 @@ export const Checkbox: React.FC<CheckboxProps> = ({ label, ...props }) => (
       </div>
     </div>
     <span className="ml-3 text-text-main group-hover:text-text-heading transition-colors">{label}</span>
+  </label>
+);
+
+// Radio Component (Updated for Filled Style)
+interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+}
+export const Radio: React.FC<RadioProps> = ({ label, ...props }) => (
+  <label className="flex items-center cursor-pointer group select-none py-1">
+    <div className="relative">
+      <input
+        type="radio"
+        className="peer sr-only"
+        {...props}
+      />
+      {/* Outer Circle: Default white, Checked becomes Primary (Yellow) */}
+      <div className="w-6 h-6 border-2 border-yellow-200 rounded-full bg-white peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 flex items-center justify-center">
+        {/* Inner Dot: Default hidden/transparent, Checked becomes White */}
+        <div className="w-2.5 h-2.5 rounded-full bg-white transform scale-0 peer-checked:scale-100 transition-transform duration-200" />
+      </div>
+    </div>
+    <span className="ml-3 text-text-main group-hover:text-text-heading transition-colors font-medium">{label}</span>
   </label>
 );
 

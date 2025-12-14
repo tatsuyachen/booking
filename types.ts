@@ -3,8 +3,9 @@ export interface BookingData {
   date: string;
   time: string;
   duration: string;
-  topics: string[];
+  topic: string; // Changed from string[] to string for single selection
   otherTopic: string;
+  location: string; // New field
 }
 
 export interface ApiResponse {

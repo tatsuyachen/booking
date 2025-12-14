@@ -18,7 +18,6 @@ export const submitBooking = async (data: BookingData): Promise<ApiResponse> => 
     const result = await response.json();
 
     if (!response.ok) {
-      // Handle server errors (e.g., missing keys, 500 error)
       throw new Error(result.message || `Server error: ${response.status}`);
     }
 
@@ -27,24 +26,23 @@ export const submitBooking = async (data: BookingData): Promise<ApiResponse> => 
     }
 
     // Construct a friendly success message
-    let fullTopicStr = data.topics.join(', ');
+    let fullTopicStr = data.topic;
     if (data.otherTopic) {
-      fullTopicStr += (fullTopicStr ? '、' : '') + data.otherTopic;
+      fullTopicStr += ` (${data.otherTopic})`;
     }
-    if (!fullTopicStr) fullTopicStr = '未填寫主題';
+    
+    let locationStr = data.location ? `<br>地點：${data.location}` : '';
 
     return {
       success: true,
-      message: `✅ 預約成功！<br>已同步至 Google 行事曆。<br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}`
+      message: `✅ 預約成功！<br>已同步至 Google 行事曆。<br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}`
     };
 
   } catch (error: any) {
     console.error('Booking Submission Error:', error);
     
-    // Provide a helpful error message to the user
     let errorMessage = '網路發生錯誤，請稍後再試。';
     
-    // If it's a configuration error (missing vars), show the specific message from the server
     if (error.message.includes('Server Configuration Error')) {
       errorMessage = `⚠️ 系統設定錯誤：<br>${error.message}`;
     } else if (error.message.includes('Google Calendar API Error')) {

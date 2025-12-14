@@ -1,5 +1,5 @@
-import React, { useState, FormEvent, useEffect } from 'react';
-import { Input, Select, Checkbox, Textarea } from './ui/FormElements';
+import React, { useState, FormEvent } from 'react';
+import { Input, Select, Radio, Textarea } from './ui/FormElements';
 import { submitBooking } from '../services/bookingService';
 import { BookingData, BookingStatus } from '../types';
 
@@ -11,27 +11,48 @@ const BookingForm: React.FC = () => {
     date: today,
     time: '',
     duration: '1',
-    topics: [],
-    otherTopic: ''
+    topic: '商務會談', // Default value
+    otherTopic: '',
+    location: ''
   });
 
   const [status, setStatus] = useState<BookingStatus>(BookingStatus.IDLE);
   const [resultMsg, setResultMsg] = useState<string>('');
+  const [isLocating, setIsLocating] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
-    setFormData(prev => {
-      if (checked) {
-        return { ...prev, topics: [...prev.topics, value] };
-      } else {
-        return { ...prev, topics: prev.topics.filter(t => t !== value) };
-      }
-    });
+  // Handle Radio Change
+  const handleTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, topic: e.target.value }));
+  };
+
+  // Geolocation Logic
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("您的瀏覽器不支援定位功能");
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        // Construct a Google Maps link
+        const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        setFormData(prev => ({ ...prev, location: mapsLink }));
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        alert("無法取得位置，請確認您已允許瀏覽器存取位置資訊。");
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true }
+    );
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -45,14 +66,15 @@ const BookingForm: React.FC = () => {
       if (response.success) {
         setStatus(BookingStatus.SUCCESS);
         setResultMsg(response.message);
-        // Reset form but keep date as today
+        // Reset form but keep date as today and topic default
         setFormData({
             name: '',
             date: today,
             time: '',
             duration: '1',
-            topics: [],
-            otherTopic: ''
+            topic: '商務會談',
+            otherTopic: '',
+            location: ''
         });
       } else {
         setStatus(BookingStatus.ERROR);
@@ -64,7 +86,7 @@ const BookingForm: React.FC = () => {
     }
   };
 
-  // Safe HTML rendering for the message box (handling <br>)
+  // Safe HTML rendering for the message box
   const createMarkup = (html: string) => {
     return { __html: html };
   };
@@ -94,6 +116,32 @@ const BookingForm: React.FC = () => {
       />
 
       <Input
+        id="location"
+        name="location"
+        label="預約地點"
+        type="text"
+        placeholder="輸入地點或點擊按鈕取得定位"
+        value={formData.location}
+        onChange={handleInputChange}
+        rightElement={
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            disabled={isLocating}
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-bold rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            title="自動填入目前位置連結"
+          >
+            {isLocating ? (
+               <span className="animate-spin">↻</span>
+            ) : (
+               <span>📍</span>
+            )}
+            <span className="hidden sm:inline">{isLocating ? '定位中...' : '使用目前位置'}</span>
+          </button>
+        }
+      />
+
+      <Input
         id="time"
         name="time"
         label="預約時間"
@@ -118,16 +166,16 @@ const BookingForm: React.FC = () => {
       />
 
       <div className="mb-6">
-        <label className="block mb-3 text-base font-bold text-text-heading">討論主題 (可複選)</label>
+        <label className="block mb-3 text-base font-bold text-text-heading">討論主題 (單選)</label>
         <div className="flex flex-col gap-3">
-          {['商務會談', '私誼敘舊', '親屬約會'].map((topic) => (
-            <Checkbox
-              key={topic}
-              label={topic}
-              name="topics"
-              value={topic}
-              checked={formData.topics.includes(topic)}
-              onChange={handleCheckboxChange}
+          {['商務會談', '私誼敘舊', '親屬約會'].map((topicOption) => (
+            <Radio
+              key={topicOption}
+              label={topicOption}
+              name="topic" // Same name group ensuring mutual exclusion
+              value={topicOption}
+              checked={formData.topic === topicOption}
+              onChange={handleTopicChange}
             />
           ))}
         </div>

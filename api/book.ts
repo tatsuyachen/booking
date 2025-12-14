@@ -25,12 +25,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Missing Google Calendar Environment Variables:', missingKeys);
     return res.status(500).json({ 
       success: false, 
-      // Return specific missing keys to help the user debug
       message: `Server Configuration Error: Missing env vars: ${missingKeys.join(', ')}. Please check Vercel Settings.` 
     });
   }
 
-  const { name, date, time, duration, topics, otherTopic } = req.body;
+  // Destructure new fields: location, topic (singular)
+  const { name, date, time, duration, topic, otherTopic, location } = req.body;
 
   if (!name || !date || !time) {
      return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -40,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 2. Handle Private Key Formatting
     let safePrivateKey = privateKey as string;
     
-    // Remove wrapping quotes if they exist (sometimes users add quotes in Vercel UI)
+    // Remove wrapping quotes if they exist
     if (safePrivateKey.startsWith('"') && safePrivateKey.endsWith('"')) {
         safePrivateKey = safePrivateKey.slice(1, -1);
     }
@@ -69,14 +69,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const durationHours = parseFloat(duration);
     const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
 
-    // Format topics
-    const topicsStr = topics && topics.length > 0 ? topics.join(', ') : '無特定主題';
-    const description = `預約人：${name}\n討論主題：${topicsStr}\n備註：${otherTopic || '無'}`;
+    // Format final topic string
+    const finalTopic = otherTopic ? `${topic} (${otherTopic})` : topic;
+    const description = `預約人：${name}\n討論主題：${finalTopic}\n備註：${otherTopic || '無'}\n地點：${location || '未指定'}`;
 
     // 5. Insert Event into Google Calendar
     const event = {
-      summary: `[預約] ${name} - ${topicsStr}`,
+      summary: `[預約] ${name} - ${topic}`,
       description: description,
+      location: location || '', // Add location field to Google Calendar event
       start: {
         dateTime: startDateTime.toISOString(),
         timeZone: 'Asia/Taipei', 

@@ -1,5 +1,7 @@
 {
   "name": "My Scheduler",
   "description": "A lively, aesthetic online booking system integrated with Google Calendar logic.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
