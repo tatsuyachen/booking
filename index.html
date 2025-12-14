@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>線上預約系統 | My Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#fcd34d', // amber-300
+                hover: '#fbbf24',   // amber-400
+              },
+              secondary: '#f9a8d4', // pink-300
+              background: '#fffbeb', // amber-50
+              card: '#ffffff',
+              text: {
+                main: '#4b5563', // gray-600
+                sub: '#9ca3af',  // gray-400
+                heading: '#7c2d12', // amber-900
+              }
+            },
+            fontFamily: {
+              sans: ['system-ui', '-apple-system', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
