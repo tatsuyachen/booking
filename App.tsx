@@ -8,15 +8,15 @@ const App: React.FC = () => {
         
         {/* Header Section */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-[2.5rem] mx-auto mb-4 border-4 border-white shadow-[0_4px_10px_rgba(251,191,36,0.3)]">
+          {/* Reverted to Emoji Avatar */}
+          <div className="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-[2.5rem] mx-auto mb-4 shadow-[0_4px_10px_rgba(251,191,36,0.3)] border-4 border-white">
             ✨
           </div>
           <h1 className="text-[1.75rem] font-extrabold mb-2 text-text-heading">
             預約我的時間
           </h1>
           <p className="text-text-sub text-base m-0">
-            請填寫下方表單，將自動同步至行事曆。<br />
-            <small className="text-sm opacity-80">(預覽模式：選 12:00 會模擬行程衝突)</small>
+            請填寫下方表單，將自動同步至行事曆。
           </p>
         </div>
 
