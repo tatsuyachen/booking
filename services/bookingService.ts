@@ -44,8 +44,11 @@ export const submitBooking = async (data: BookingData): Promise<ApiResponse> => 
     // Provide a helpful error message to the user
     let errorMessage = '網路發生錯誤，請稍後再試。';
     
-    if (error.message.includes('Missing Google credentials')) {
-      errorMessage = '⚠️ 系統設定錯誤：尚未設定 Google Calendar API 金鑰。<br>請聯絡管理員檢查 Vercel 環境變數。';
+    // If it's a configuration error (missing vars), show the specific message from the server
+    if (error.message.includes('Server Configuration Error')) {
+      errorMessage = `⚠️ 系統設定錯誤：<br>${error.message}`;
+    } else if (error.message.includes('Google Calendar API Error')) {
+       errorMessage = `⚠️ Google API 錯誤：<br>${error.message}`;
     } else {
       errorMessage = `⚠️ 預約失敗：${error.message}`;
     }

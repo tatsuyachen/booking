@@ -15,11 +15,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY;
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
 
-  if (!clientEmail || !privateKey || !calendarId) {
-    console.error('Missing Google Calendar Environment Variables');
+  // Check specifically which keys are missing
+  const missingKeys: string[] = [];
+  if (!clientEmail) missingKeys.push('GOOGLE_CLIENT_EMAIL');
+  if (!privateKey) missingKeys.push('GOOGLE_PRIVATE_KEY');
+  if (!calendarId) missingKeys.push('GOOGLE_CALENDAR_ID');
+
+  if (missingKeys.length > 0) {
+    console.error('Missing Google Calendar Environment Variables:', missingKeys);
     return res.status(500).json({ 
       success: false, 
-      message: 'Server Configuration Error: Missing Google credentials. Please set GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_CALENDAR_ID in Vercel settings.' 
+      // Return specific missing keys to help the user debug
+      message: `Server Configuration Error: Missing env vars: ${missingKeys.join(', ')}. Please check Vercel Settings.` 
     });
   }
 
@@ -30,13 +37,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 2. Handle Private Key Formatting (Fixes common Vercel env var copy-paste issues)
-    let safePrivateKey = privateKey;
-    // Remove wrapping quotes if they exist
+    // 2. Handle Private Key Formatting
+    let safePrivateKey = privateKey as string;
+    
+    // Remove wrapping quotes if they exist (sometimes users add quotes in Vercel UI)
     if (safePrivateKey.startsWith('"') && safePrivateKey.endsWith('"')) {
         safePrivateKey = safePrivateKey.slice(1, -1);
     }
-    // Convert literal \n characters (common in Vercel UI) to actual newlines
+    // Convert literal \n characters to actual newlines
     safePrivateKey = safePrivateKey.replace(/\\n/g, '\n');
 
     // 3. Authenticate with Google
@@ -51,8 +59,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const calendar = google.calendar({ version: 'v3', auth });
 
     // 4. Calculate Event Time (Force Taipei Time +08:00)
-    // We explicitly append +08:00 to the time string to ensure the date object is created in Taipei time,
-    // regardless of the server's timezone (Vercel servers use UTC).
     const startDateTimeStr = `${date}T${time}:00+08:00`;
     const startDateTime = new Date(startDateTimeStr);
     
