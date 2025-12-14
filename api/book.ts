@@ -40,8 +40,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // 2. Calculate Start and End times
-    const startDateTime = new Date(`${date}T${time}:00`);
+    // 2. Calculate Start and End times (Force Taipei Time GMT+8)
+    // Vercel servers usually run in UTC. If we verify "2023-01-01T10:00:00" directly, it might be treated as UTC.
+    // We explicitly append +08:00 to ensure it represents Taipei time.
+    const startDateTimeStr = `${date}T${time}:00+08:00`;
+    const startDateTime = new Date(startDateTimeStr);
+    
+    // Check if Date is valid
+    if (isNaN(startDateTime.getTime())) {
+        throw new Error('Invalid date/time format');
+    }
+
     const durationHours = parseFloat(duration);
     const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
 
@@ -54,8 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       summary: `[預約] ${name} - ${topicsStr}`,
       description: description,
       start: {
-        dateTime: startDateTime.toISOString(),
-        timeZone: 'Asia/Taipei', // Adjust timeZone if needed
+        dateTime: startDateTime.toISOString(), // Converts to UTC string (e.g., ...Z), which Google Calendar accepts
+        timeZone: 'Asia/Taipei', 
       },
       end: {
         dateTime: endDateTime.toISOString(),
@@ -63,10 +72,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     };
 
-    // Check for conflicts (Optional enhancement: list events first)
-    // For this simple version, we just insert. Google Calendar allows overlapping events by default
-    // unless you check free/busy.
-    
     const response = await calendar.events.insert({
       calendarId: calendarId,
       requestBody: event,
