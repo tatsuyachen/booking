@@ -1,32 +1,58 @@
 import { BookingData, ApiResponse } from '../types';
 
 /**
- * Simulates the backend API call.
- * In a real Vercel deployment, this would fetch('/api/book', { method: 'POST', body: ... })
+ * Sends booking data to the Vercel serverless function (/api/book).
  */
 export const submitBooking = async (data: BookingData): Promise<ApiResponse> => {
-  console.log('Preparing to send data:', data);
+  console.log('Sending data to API:', data);
 
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  try {
+    const response = await fetch('/api/book', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-  // Simulation Logic: Fail if time is 12:00
-  if (data.time === '12:00') {
+    const result = await response.json();
+
+    if (!response.ok) {
+      // Handle server errors (e.g., missing keys, 500 error)
+      throw new Error(result.message || `Server error: ${response.status}`);
+    }
+
+    if (!result.success) {
+      throw new Error(result.message || 'Booking failed');
+    }
+
+    // Construct a friendly success message
+    let fullTopicStr = data.topics.join(', ');
+    if (data.otherTopic) {
+      fullTopicStr += (fullTopicStr ? '、' : '') + data.otherTopic;
+    }
+    if (!fullTopicStr) fullTopicStr = '未填寫主題';
+
+    return {
+      success: true,
+      message: `✅ 預約成功！<br>已同步至 Google 行事曆。<br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}`
+    };
+
+  } catch (error: any) {
+    console.error('Booking Submission Error:', error);
+    
+    // Provide a helpful error message to the user
+    let errorMessage = '網路發生錯誤，請稍後再試。';
+    
+    if (error.message.includes('Missing Google credentials')) {
+      errorMessage = '⚠️ 系統設定錯誤：尚未設定 Google Calendar API 金鑰。<br>請聯絡管理員檢查 Vercel 環境變數。';
+    } else {
+      errorMessage = `⚠️ 預約失敗：${error.message}`;
+    }
+
     return {
       success: false,
-      message: `⚠️ 預約失敗！<br> ${data.date} ${data.time} 這個時段已經有行程了，請選擇其他時間。`
+      message: errorMessage
     };
   }
-
-  // Construct readable topic string for success message
-  let fullTopicStr = data.topics.join(', ');
-  if (data.otherTopic) {
-    fullTopicStr += (fullTopicStr ? '、' : '') + data.otherTopic;
-  }
-  if (!fullTopicStr) fullTopicStr = '未填寫主題';
-
-  return {
-    success: true,
-    message: `✅ 預約成功！<br>已為您安排：${data.date} ${data.time}<br>主題：${fullTopicStr}<br>確認信已寄出 (模擬)。`
-  };
 };
