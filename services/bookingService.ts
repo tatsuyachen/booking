@@ -33,9 +33,25 @@ export const submitBooking = async (data: BookingData): Promise<ApiResponse> => 
     
     let locationStr = data.location ? `<br>地點：${data.location}` : '';
 
+    // Generate "Add to Google Calendar" link
+    // Format: https://calendar.google.com/calendar/render?action=TEMPLATE&text=TITLE&dates=START/END&details=DESC&location=LOC
+    let googleCalendarUrl = '';
+    if (result.start && result.end) {
+      // Helper to format ISO string to Google Calendar format (YYYYMMDDTHHMMSSZ)
+      const formatTime = (isoString: string) => isoString.replace(/-|:|\.\d{3}/g, '');
+      
+      const title = encodeURIComponent(`[預約] ${data.name} - ${data.topic}`);
+      const details = encodeURIComponent(`預約人：${data.name}\n討論主題：${fullTopicStr}\n備註：${data.otherTopic || '無'}`);
+      const location = encodeURIComponent(data.location || '');
+      const dates = `${formatTime(result.start)}/${formatTime(result.end)}`;
+      
+      googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
+    }
+
     return {
       success: true,
-      message: `✅ 預約成功！<br>已同步至 Google 行事曆。<br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}`
+      message: `✅ 預約成功！<br>已同步至系統行事曆。<br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}`,
+      googleCalendarUrl // Pass the generated URL back
     };
 
   } catch (error: any) {

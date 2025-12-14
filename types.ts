@@ -11,6 +11,7 @@ export interface BookingData {
 export interface ApiResponse {
   success: boolean;
   message: string;
+  googleCalendarUrl?: string; // URL to add event to user's personal calendar
 }
 
 export enum BookingStatus {

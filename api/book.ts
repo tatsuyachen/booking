@@ -96,7 +96,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ 
       success: true, 
       message: 'Event created successfully',
-      link: response.data.htmlLink 
+      link: response.data.htmlLink,
+      // Return ISO strings so frontend can generate "Add to Calendar" link accurately
+      start: startDateTime.toISOString(),
+      end: endDateTime.toISOString()
     });
 
   } catch (error: any) {

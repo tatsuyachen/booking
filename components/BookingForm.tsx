@@ -18,6 +18,7 @@ const BookingForm: React.FC = () => {
 
   const [status, setStatus] = useState<BookingStatus>(BookingStatus.IDLE);
   const [resultMsg, setResultMsg] = useState<string>('');
+  const [calendarUrl, setCalendarUrl] = useState<string>(''); // Store the add-to-calendar URL
   const [isLocating, setIsLocating] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -59,6 +60,7 @@ const BookingForm: React.FC = () => {
     e.preventDefault();
     setStatus(BookingStatus.SUBMITTING);
     setResultMsg('');
+    setCalendarUrl('');
 
     try {
       const response = await submitBooking(formData);
@@ -66,6 +68,10 @@ const BookingForm: React.FC = () => {
       if (response.success) {
         setStatus(BookingStatus.SUCCESS);
         setResultMsg(response.message);
+        if (response.googleCalendarUrl) {
+          setCalendarUrl(response.googleCalendarUrl);
+        }
+        
         // Reset form but keep date as today and topic default
         setFormData({
             name: '',
@@ -205,13 +211,25 @@ const BookingForm: React.FC = () => {
 
       {status !== BookingStatus.IDLE && status !== BookingStatus.SUBMITTING && (
         <div 
-          className={`mt-6 p-4 rounded-xl text-base font-medium leading-relaxed border-2 animate-fadeIn
+          className={`mt-6 p-4 rounded-xl text-base font-medium leading-relaxed border-2 animate-fadeIn flex flex-col gap-4
             ${status === BookingStatus.SUCCESS 
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
               : 'bg-red-50 text-red-800 border-red-200'
             }`}
         >
            <div dangerouslySetInnerHTML={createMarkup(resultMsg)} />
+           
+           {status === BookingStatus.SUCCESS && calendarUrl && (
+             <a 
+               href={calendarUrl}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="self-start inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+             >
+               <span>📅</span>
+               加入我的 Google 行事曆
+             </a>
+           )}
         </div>
       )}
     </form>
