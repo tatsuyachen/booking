@@ -69,6 +69,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const durationHours = parseFloat(duration);
     const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
 
+    // --- NEW: Check for Conflicts ---
+    const conflictCheck = await calendar.events.list({
+      calendarId: calendarId,
+      timeMin: startDateTime.toISOString(),
+      timeMax: endDateTime.toISOString(),
+      singleEvents: true, // Expand recurring events
+      timeZone: 'Asia/Taipei',
+    });
+
+    // Check if any events exist in this range
+    const busyEvents = conflictCheck.data.items?.filter(event => {
+      // Ignore "Available" (transparent) events if you use them in your calendar
+      return event.transparency !== 'transparent'; 
+    });
+
+    if (busyEvents && busyEvents.length > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        message: `<b>該時段 (${date} ${time}) 已有其他行程安排。</b><br/>請選擇其他時間或日期。` 
+      });
+    }
+    // --------------------------------
+
     // Format final topic string
     const finalTopic = otherTopic ? `${topic} (${otherTopic})` : topic;
     const description = `預約人：${name}\n討論主題：${finalTopic}\n備註：${otherTopic || '無'}\n地點：${location || '未指定'}`;
