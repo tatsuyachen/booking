@@ -21,11 +21,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isWeekday = !isWeekend;
     const hour = parseInt(time.split(':')[0]);
 
-    // Rule 1: 平日上午 12:00 之前不受理預約
+    // Rule 1: 平日上午 12:00 之前不受理預約 (移除「主人」稱謂)
     if (isWeekday && hour < 12) {
       return res.status(403).json({
         success: false,
-        message: `<b>預約未成功</b><br/>平日 12:00 之前為主人專注工作時間，恕不接受預約。請選擇下午或晚間時段。`
+        message: `<b>預約未成功</b><br/>平日 12:00 之前為固定專注工作時間，恕不接受預約。請選擇下午或晚間時段。`
       });
     }
 
@@ -41,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (isWeekend && topic === '商務會談') {
       return res.status(403).json({
         success: false,
-        message: `<b>預約未成功</b><br/>週末為私人休憩時間，恕不處理商務事宜。建議改約平日下午。`
+        message: `<b>預約未成功</b><br/>週末為個人休憩時間，恕不處理商務事宜。建議改約平日下午。`
       });
     }
 
@@ -94,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await calendar.events.insert({ calendarId: calendarId, requestBody: event });
 
     const formatForUrl = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const guestCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`約會：${finalTopic}`)}&details=${encodeURIComponent(`與 ${process.env.OWNER_NAME || '我'} 的約會\n備註：${otherTopic || '無'}`)}&location=${encodeURIComponent(location || '')}&dates=${formatForUrl(startDateTime)}/${formatForUrl(endDateTime)}`;
+    const guestCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`約會：${finalTopic}`)}&details=${encodeURIComponent(`預約確認：與您有個約定\n備註：${otherTopic || '無'}`)}&location=${encodeURIComponent(location || '')}&dates=${formatForUrl(startDateTime)}/${formatForUrl(endDateTime)}`;
 
     if (resendApiKey && notificationEmail) {
       try {
