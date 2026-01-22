@@ -56,21 +56,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const finalTopic = otherTopic ? `${topic} (${otherTopic})` : topic;
     
-    // Insert Event with [待確認] prefix
+    // Insert Event to Owner's Calendar
     const event = {
-      summary: `[待確認] ${name} - ${topic}`,
+      summary: `預約：${name} - ${topic}`,
       description: `預約人：${name}\n主題：${finalTopic}\n地點：${location || '未指定'}\n備註：${otherTopic || '無'}`,
       location: location || '',
       start: { dateTime: startDateTime.toISOString(), timeZone: 'Asia/Taipei' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'Asia/Taipei' },
     };
 
-    const calResponse = await calendar.events.insert({
+    await calendar.events.insert({
       calendarId: calendarId,
       requestBody: event,
     });
 
-    // --- Send Email Notification via Resend ---
+    // Construct a Google Calendar Template URL for the Guest
+    // Format: https://www.google.com/calendar/render?action=TEMPLATE&text=TITLE&details=DESC&location=LOC&dates=START/END
+    const formatForUrl = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const guestCalendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`約會：${finalTopic}`)}&details=${encodeURIComponent(`與 ${process.env.OWNER_NAME || '我'} 的約會\n備註：${otherTopic || '無'}`)}&location=${encodeURIComponent(location || '')}&dates=${formatForUrl(startDateTime)}/${formatForUrl(endDateTime)}`;
+
+    // --- Send Email Notification via Resend (To Owner) ---
     if (resendApiKey && notificationEmail) {
       try {
         await fetch('https://api.resend.com/emails', {
@@ -82,18 +87,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           body: JSON.stringify({
             from: '預約系統 <onboarding@resend.dev>',
             to: notificationEmail,
-            subject: `📅 新預約申請：${name} (${date})`,
+            subject: `📅 新預約：${name} (${date})`,
             html: `
               <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #7c2d12;">您有一則新的預約申請</h2>
+                <h2 style="color: #7c2d12;">收到一則新的預約</h2>
                 <p><strong>預約人：</strong> ${name}</p>
                 <p><strong>日期：</strong> ${date}</p>
                 <p><strong>時間：</strong> ${time} (${duration} 小時)</p>
                 <p><strong>討論主題：</strong> ${finalTopic}</p>
                 <p><strong>預約地點：</strong> ${location || '未提供'}</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 0.9rem; color: #666;">此行程已自動加入行事曆並標記為「待確認」。</p>
-                <a href="${calResponse.data.htmlLink}" style="display: inline-block; padding: 10px 20px; bg-color: #fcd34d; color: #7c2d12; text-decoration: none; border-radius: 5px; font-weight: bold;">查看行事曆</a>
+                <p style="font-size: 0.9rem; color: #666;">行程已自動同步至您的 Google 行事曆。</p>
               </div>
             `
           })
@@ -105,9 +109,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ 
       success: true, 
-      message: 'Request submitted',
-      start: startDateTime.toISOString(),
-      end: endDateTime.toISOString()
+      message: 'Booking completed',
+      googleCalendarUrl: guestCalendarUrl
     });
 
   } catch (error: any) {

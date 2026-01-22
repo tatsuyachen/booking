@@ -20,7 +20,8 @@ export const submitBooking = async (data: BookingData): Promise<ApiResponse> => 
 
     return {
       success: true,
-      message: `📅 <b>預約申請已送出！</b><br>我已收到您的預約資訊，將於 24 小時內確認。<br><br><b>預約詳情：</b><br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}<br><br>請靜候確認通知，謝謝！`
+      message: `✨ <b>預約成功！</b><br>行程已自動同步。期待當天與您見面。<br><br><b>預約詳情：</b><br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}<br><br>您也可以點擊下方按鈕將行程加入您的行事曆。`,
+      googleCalendarUrl: result.googleCalendarUrl
     };
 
   } catch (error: any) {
