@@ -1,8 +1,10 @@
+// Import React to fix namespace errors for React.FC and React.ChangeEvent
 import React, { useState, FormEvent } from 'react';
 import { Input, Select, Radio, Textarea } from './ui/FormElements';
 import { submitBooking } from '../services/bookingService';
 import { BookingData, BookingStatus } from '../types';
 
+// Use React.FC as a functional component type
 const BookingForm: React.FC = () => {
   const today = new Date().toISOString().split('T')[0];
   
@@ -21,12 +23,13 @@ const BookingForm: React.FC = () => {
   const [calendarUrl, setCalendarUrl] = useState<string>(''); // Store the add-to-calendar URL
   const [isLocating, setIsLocating] = useState(false);
 
+  // Use React.ChangeEvent for input events
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle Radio Change
+  // Use React.ChangeEvent for radio button changes
   const handleTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, topic: e.target.value }));
   };
@@ -168,6 +171,7 @@ const BookingForm: React.FC = () => {
           { value: '1', label: '1 小時' },
           { value: '2', label: '2 小時' },
           { value: '3', label: '3 小時' },
+          { value: '4', label: '4 小時' },
         ]}
       />
 
@@ -192,7 +196,7 @@ const BookingForm: React.FC = () => {
         name="otherTopic"
         label="其他主題 / 備註事項"
         rows={3}
-        placeholder="如果有其他主題或細節，請在此說明..."
+        placeholder="如果有其他主題 or 細節，請在此說明..."
         value={formData.otherTopic}
         onChange={handleInputChange}
       />
