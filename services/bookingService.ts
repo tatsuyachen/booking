@@ -1,17 +1,10 @@
 import { BookingData, ApiResponse } from '../types';
 
-/**
- * Sends booking data to the Vercel serverless function (/api/book).
- */
 export const submitBooking = async (data: BookingData): Promise<ApiResponse> => {
-  console.log('Sending data to API:', data);
-
   try {
     const response = await fetch('/api/book', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
 
@@ -21,55 +14,20 @@ export const submitBooking = async (data: BookingData): Promise<ApiResponse> => 
       throw new Error(result.message || `Server error: ${response.status}`);
     }
 
-    if (!result.success) {
-      throw new Error(result.message || 'Booking failed');
-    }
-
-    // Construct a friendly success message
     let fullTopicStr = data.topic;
-    if (data.otherTopic) {
-      fullTopicStr += ` (${data.otherTopic})`;
-    }
-    
+    if (data.otherTopic) fullTopicStr += ` (${data.otherTopic})`;
     let locationStr = data.location ? `<br>地點：${data.location}` : '';
-
-    // Generate "Add to Google Calendar" link
-    // Format: https://calendar.google.com/calendar/render?action=TEMPLATE&text=TITLE&dates=START/END&details=DESC&location=LOC
-    let googleCalendarUrl = '';
-    if (result.start && result.end) {
-      // Helper to format ISO string to Google Calendar format (YYYYMMDDTHHMMSSZ)
-      const formatTime = (isoString: string) => isoString.replace(/-|:|\.\d{3}/g, '');
-      
-      const title = encodeURIComponent(`[預約] ${data.name} - ${data.topic}`);
-      const details = encodeURIComponent(`預約人：${data.name}\n討論主題：${fullTopicStr}\n備註：${data.otherTopic || '無'}`);
-      const location = encodeURIComponent(data.location || '');
-      const dates = `${formatTime(result.start)}/${formatTime(result.end)}`;
-      
-      googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
-    }
 
     return {
       success: true,
-      message: `✅ 預約成功！<br>已同步至系統行事曆。<br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}`,
-      googleCalendarUrl // Pass the generated URL back
+      message: `📅 <b>預約申請已送出！</b><br>我已收到您的預約資訊，將於 24 小時內確認。<br><br><b>預約詳情：</b><br>時間：${data.date} ${data.time}<br>主題：${fullTopicStr}${locationStr}<br><br>請靜候確認通知，謝謝！`
     };
 
   } catch (error: any) {
     console.error('Booking Submission Error:', error);
-    
-    let errorMessage = '網路發生錯誤，請稍後再試。';
-    
-    if (error.message.includes('Server Configuration Error')) {
-      errorMessage = `⚠️ 系統設定錯誤：<br>${error.message}`;
-    } else if (error.message.includes('Google Calendar API Error')) {
-       errorMessage = `⚠️ Google API 錯誤：<br>${error.message}`;
-    } else {
-      errorMessage = `⚠️ 預約失敗：${error.message}`;
-    }
-
     return {
       success: false,
-      message: errorMessage
+      message: error.message.includes('已有其他行程') ? error.message : `⚠️ 預約失敗：${error.message}`
     };
   }
 };

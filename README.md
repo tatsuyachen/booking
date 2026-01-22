@@ -1,45 +1,23 @@
 # My Scheduler - 線上預約系統
 
-這是一個整合 Google Calendar 的線上預約系統，建立於 React + Vite + Vercel Serverless Functions。
+這是一個整合 Google Calendar 與 Email 通知的線上預約系統。
 
 ## 🚀 部署至 Vercel 步驟
 
-### 1. 準備程式碼
-將此專案 Push 到你的 GitHub Repository。
+### 1. 設定環境變數 (Environment Variables)
 
-### 2. 匯入 Vercel
-1. 登入 [Vercel Dashboard](https://vercel.com/dashboard)。
-2. 點擊 "Add New..." -> "Project"。
-3. 選擇你的 GitHub Repository 並匯入。
-4. Framework Preset 選擇 `Vite` (通常會自動偵測)。
-5. Root Directory 保持預設 (`./`)。
+請在 Vercel Dashboard 設定以下變數：
 
-### 3. 設定環境變數 (Environment Variables)
+| 變數名稱 | 來源 | 說明 |
+|---|---|---|
+| `GOOGLE_CLIENT_EMAIL` | Google Cloud | 服務帳戶 Email |
+| `GOOGLE_PRIVATE_KEY` | Google Cloud | 服務帳戶 私鑰 |
+| `GOOGLE_CALENDAR_ID` | Google Calendar | 您的日曆 ID (通常是 Gmail) |
+| `RESEND_API_KEY` | [Resend](https://resend.com) | Email 發送 API Key |
+| `NOTIFICATION_EMAIL` | 您的 Gmail | 接收通知的電子信箱 |
 
-**這是最重要的一步！** 為了讓系統能連線到你的 Google 行事曆，請在 Vercel 的部署設定頁面（Environment Variables 區塊）新增以下變數：
+### 2. Google 行事曆設定
+確保已將 `GOOGLE_CLIENT_EMAIL` 加入行事曆的「共用」名單中，並給予「變更活動」權限。
 
-| 變數名稱 (Name) | 填入數值 (Value) |
-|---|---|
-| `GOOGLE_CLIENT_EMAIL` | `booking-tatsuyachen@gen-lang-client-0586774803.iam.gserviceaccount.com` |
-| `GOOGLE_CALENDAR_ID` | `tatsuya.chen1977@gmail.com` |
-| `GOOGLE_PRIVATE_KEY` | 請填入你的 Private Key (以 `-----BEGIN PRIVATE KEY-----` 開頭，`-----END PRIVATE KEY-----` 結尾的完整字串) |
-
-**注意：** 填寫 `GOOGLE_PRIVATE_KEY` 時，請直接複製整串文字貼上即可，不需要手動將 `\n` 換成換行，系統程式碼會自動處理。
-
----
-
-## 🛠️ 本地開發
-
-若要在本機測試 API 功能，你需要安裝 `vercel` CLI：
-
-```bash
-npm install -g vercel
-```
-
-然後使用以下指令啟動（這會模擬 Vercel 的 API 環境）：
-
-```bash
-vercel dev
-```
-
-(第一次執行時需登入 Vercel 並連結專案，並確保 Vercel 雲端上的環境變數已設定，`vercel dev` 會自動拉取下來使用)
+### 3. Email 通知說明
+系統將透過 Resend 發送通知信。若您是第一次使用，Resend 預設只能發信給您註冊時的信箱。若要發給其他人，需在 Resend 進行域名驗證。

@@ -1,135 +1,117 @@
 import { google } from 'googleapis';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Scopes required for the Google Calendar API
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
 
-  // 1. Secure Environment Variable Check
+  // 1. Environment Variables
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
   const privateKey = process.env.GOOGLE_PRIVATE_KEY;
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
-  // Check specifically which keys are missing
-  const missingKeys: string[] = [];
-  if (!clientEmail) missingKeys.push('GOOGLE_CLIENT_EMAIL');
-  if (!privateKey) missingKeys.push('GOOGLE_PRIVATE_KEY');
-  if (!calendarId) missingKeys.push('GOOGLE_CALENDAR_ID');
-
-  if (missingKeys.length > 0) {
-    console.error('Missing Google Calendar Environment Variables:', missingKeys);
-    return res.status(500).json({ 
-      success: false, 
-      message: `Server Configuration Error: Missing env vars: ${missingKeys.join(', ')}. Please check Vercel Settings.` 
-    });
-  }
-
-  // Destructure new fields: location, topic (singular)
   const { name, date, time, duration, topic, otherTopic, location } = req.body;
 
-  if (!name || !date || !time) {
-     return res.status(400).json({ success: false, message: 'Missing required fields' });
-  }
-
   try {
-    // 2. Handle Private Key Formatting
-    let safePrivateKey = privateKey as string;
-    
-    // Remove wrapping quotes if they exist
-    if (safePrivateKey.startsWith('"') && safePrivateKey.endsWith('"')) {
-        safePrivateKey = safePrivateKey.slice(1, -1);
-    }
-    // Convert literal \n characters to actual newlines
-    safePrivateKey = safePrivateKey.replace(/\\n/g, '\n');
+    // Basic validation
+    if (!name || !date || !time) throw new Error('Missing required fields');
 
-    // 3. Authenticate with Google
+    // Handle Private Key
+    let safePrivateKey = (privateKey as string).replace(/\\n/g, '\n');
+    if (safePrivateKey.startsWith('"') && safePrivateKey.endsWith('"')) {
+      safePrivateKey = safePrivateKey.slice(1, -1);
+    }
+
     const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: clientEmail,
-        private_key: safePrivateKey,
-      },
+      credentials: { client_email: clientEmail, private_key: safePrivateKey },
       scopes: SCOPES,
     });
 
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // 4. Calculate Event Time (Force Taipei Time +08:00)
-    const startDateTimeStr = `${date}T${time}:00+08:00`;
-    const startDateTime = new Date(startDateTimeStr);
-    
-    if (isNaN(startDateTime.getTime())) {
-        throw new Error('Invalid date/time format');
-    }
+    // Calculate times
+    const startDateTime = new Date(`${date}T${time}:00+08:00`);
+    const endDateTime = new Date(startDateTime.getTime() + parseFloat(duration) * 60 * 60 * 1000);
 
-    const durationHours = parseFloat(duration);
-    const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
-
-    // --- NEW: Check for Conflicts ---
+    // Conflict Check
     const conflictCheck = await calendar.events.list({
       calendarId: calendarId,
       timeMin: startDateTime.toISOString(),
       timeMax: endDateTime.toISOString(),
-      singleEvents: true, // Expand recurring events
-      timeZone: 'Asia/Taipei',
+      singleEvents: true,
     });
 
-    // Check if any events exist in this range
-    const busyEvents = conflictCheck.data.items?.filter(event => {
-      // Ignore "Available" (transparent) events if you use them in your calendar
-      return event.transparency !== 'transparent'; 
-    });
-
+    const busyEvents = conflictCheck.data.items?.filter(event => event.transparency !== 'transparent');
     if (busyEvents && busyEvents.length > 0) {
       return res.status(409).json({ 
         success: false, 
-        message: `<b>該時段 (${date} ${time}) 已有其他行程安排。</b><br/>請選擇其他時間或日期。` 
+        message: `<b>該時段已有行程安排。</b><br/>請選擇其他時間。` 
       });
     }
-    // --------------------------------
 
-    // Format final topic string
     const finalTopic = otherTopic ? `${topic} (${otherTopic})` : topic;
-    const description = `預約人：${name}\n討論主題：${finalTopic}\n備註：${otherTopic || '無'}\n地點：${location || '未指定'}`;
-
-    // 5. Insert Event into Google Calendar
+    
+    // Insert Event with [待確認] prefix
     const event = {
-      summary: `[預約] ${name} - ${topic}`,
-      description: description,
-      location: location || '', // Add location field to Google Calendar event
-      start: {
-        dateTime: startDateTime.toISOString(),
-        timeZone: 'Asia/Taipei', 
-      },
-      end: {
-        dateTime: endDateTime.toISOString(),
-        timeZone: 'Asia/Taipei',
-      },
+      summary: `[待確認] ${name} - ${topic}`,
+      description: `預約人：${name}\n主題：${finalTopic}\n地點：${location || '未指定'}\n備註：${otherTopic || '無'}`,
+      location: location || '',
+      start: { dateTime: startDateTime.toISOString(), timeZone: 'Asia/Taipei' },
+      end: { dateTime: endDateTime.toISOString(), timeZone: 'Asia/Taipei' },
     };
 
-    const response = await calendar.events.insert({
+    const calResponse = await calendar.events.insert({
       calendarId: calendarId,
       requestBody: event,
     });
 
+    // --- Send Email Notification via Resend ---
+    if (resendApiKey && notificationEmail) {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`
+          },
+          body: JSON.stringify({
+            from: '預約系統 <onboarding@resend.dev>',
+            to: notificationEmail,
+            subject: `📅 新預約申請：${name} (${date})`,
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #7c2d12;">您有一則新的預約申請</h2>
+                <p><strong>預約人：</strong> ${name}</p>
+                <p><strong>日期：</strong> ${date}</p>
+                <p><strong>時間：</strong> ${time} (${duration} 小時)</p>
+                <p><strong>討論主題：</strong> ${finalTopic}</p>
+                <p><strong>預約地點：</strong> ${location || '未提供'}</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 0.9rem; color: #666;">此行程已自動加入行事曆並標記為「待確認」。</p>
+                <a href="${calResponse.data.htmlLink}" style="display: inline-block; padding: 10px 20px; bg-color: #fcd34d; color: #7c2d12; text-decoration: none; border-radius: 5px; font-weight: bold;">查看行事曆</a>
+              </div>
+            `
+          })
+        });
+      } catch (emailErr) {
+        console.error('Email notification failed:', emailErr);
+      }
+    }
+
     return res.status(200).json({ 
       success: true, 
-      message: 'Event created successfully',
-      link: response.data.htmlLink,
-      // Return ISO strings so frontend can generate "Add to Calendar" link accurately
+      message: 'Request submitted',
       start: startDateTime.toISOString(),
       end: endDateTime.toISOString()
     });
 
   } catch (error: any) {
-    console.error('Google Calendar API Error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Google Calendar API Error: ' + (error.message || 'Unknown error') 
-    });
+    console.error(error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 }
