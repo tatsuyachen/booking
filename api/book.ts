@@ -108,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             from: '預約系統 <onboarding@resend.dev>',
             to: notificationEmail,
             subject: `📅 新預約：${name} (${date})`,
-            html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;"><h2>收到新預約</h2><p><strong>預約人：</strong> ${name}</p><p><strong>日期：</strong> ${date}</p><p><strong>時間：</strong> ${time}</p><p><strong>主題：</strong> ${finalTopic}</p></div>`
+            html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;"><h2>收到新預約</h2><p><strong>預約人：</strong> ${name}</p><p><strong>日期：</strong> ${date}</p><p><strong>時間：</strong> ${time}</p><p><strong>主題：</strong> ${finalTopic}</p><p><strong>地點：</strong> ${location || '未指定'}</p></div>`
           })
         });
       } catch (e) { console.error(e); }
